@@ -1,0 +1,22 @@
+{
+  "auth" : "cpan:LEONT",
+  "authors" : [
+    "Leon Timmermans"
+  ],
+  "build-depends" : [ ],
+  "depends" : [
+    "Protocol::Postgres"
+  ],
+  "description" : "blah blah blah",
+  "license" : "Artistic-2.0",
+  "name" : "Net::Postgres",
+  "perl" : "6.d",
+  "provides" : {
+    "Net::Postgres" : "lib/Net/Postgres.rakumod"
+  },
+  "resources" : [ ],
+  "source-url" : "",
+  "tags" : [ ],
+  "test-depends" : [ ],
+  "version" : "0.0.1"
+}

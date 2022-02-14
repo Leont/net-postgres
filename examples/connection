@@ -1,0 +1,21 @@
+#! raku
+
+use v6.d;
+use Net::Postgres;
+
+unit sub MAIN(Str :$user = ~$*USER, Str :$database = 'test', Str :$password, :$host = 'localhost', :$port = 5432, Bool :$tls, *%tls-args);
+
+my $client = await Net::Postgres::Connection.connect-tcp(:$user, :$database, :$password, :$host, :$port, :$tls, |%tls-args);
+
+for lines() {
+	when / ^ q[uit]? / {
+		$client.terminate;
+		last;
+	}
+	default {
+		my $resultset = await $client.query(~$_);
+		for $resultset.hashes -> $row {
+			dd $row;
+		}
+	}
+}
