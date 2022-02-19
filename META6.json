@@ -15,7 +15,7 @@
     "Net::Postgres" : "lib/Net/Postgres.rakumod"
   },
   "resources" : [ ],
-  "source-url" : "",
+  "source-url" : "https://github.com/Leont/net-postgres.git",
   "tags" : [ ],
   "test-depends" : [ ],
   "version" : "0.0.1"
