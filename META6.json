@@ -5,9 +5,9 @@
   ],
   "build-depends" : [ ],
   "depends" : [
-    "Protocol::Postgres"
+    "Protocol::Postgres:ver<0.0.3+>"
   ],
-  "description" : "blah blah blah",
+  "description" : "An asynchronous postgresql client",
   "license" : "Artistic-2.0",
   "name" : "Net::Postgres",
   "perl" : "6.d",

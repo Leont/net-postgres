@@ -2,20 +2,63 @@
 
 use v6.d;
 use Net::Postgres;
+use Linenoise;
 
 unit sub MAIN(Str :$user = ~$*USER, Str :$database = 'test', Str :$password, :$host = 'localhost', :$port = 5432, Bool :$tls, *%tls-args);
 
+linenoiseHistorySetMaxLen(100);
 my $client = await Net::Postgres::Connection.connect-tcp(:$user, :$database, :$password, :$host, :$port, :$tls, |%tls-args);
 
-for lines() {
-	when / ^ q[uit]? / {
-		$client.terminate;
-		last;
-	}
-	default {
-		my $resultset = await $client.query(~$_);
-		for $resultset.hashes -> $row {
-			dd $row;
+sub stdin-supply() {
+	my $supplier = Supplier.new;
+	start {
+		while (my $line = linenoise '> ').defined {
+			linenoiseHistoryAdd($line);
+			$supplier.emit($line);
 		}
+		$supplier.done;
+	}
+	return $supplier.Supply;
+}
+
+react {
+	whenever stdin-supply() {
+		when / ^ '\\'? q[uit]? / {
+			$client.terminate;
+		}
+		when / ^ p['arameter ']? $<parameter>=[\w+] / {
+			say $client.get-parameter(~$<parameter>);
+		}
+		default {
+			CATCH { default { say .message } }
+			given await $client.query(~$_) {
+				when Net::Postgres::ResultSet {
+					react {
+						whenever .hash-rows -> $row {
+							dd $row;
+						}
+					}
+				}
+				when Bool {
+					say "Succes.";
+				}
+				when Supply {
+					for $_.list -> $row {
+						print $row;
+					}
+				}
+				when Supplier {
+					my $supplier = $_;
+					for lines() -> $line {
+						last if $line eq "";
+						$supplier.emit("$line\n");
+					}
+					$supplier.done;
+				}
+			}
+		}
+	}
+	whenever $client.disconnected {
+		done;
 	}
 }

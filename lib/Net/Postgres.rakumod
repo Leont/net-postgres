@@ -18,42 +18,68 @@ class PreparedStatement is Protocol::Postgres::PreparedStatement {
 	method resultset() { ResultSet }
 }
 
-class Connection {
-	has IO::Socket::Async:D $!socket is required;
-	has Protocol::Postgres::Client:D $!client is required handles<terminate notifications get-parameter process-id>;
-	submethod BUILD(:$!socket, :$!client) {}
+class Notification {
+	has Int:D $.sender is required;
+	has Str:D $.message is required handles<Str>;
+}
 
-	method connect-tcp(:$host = 'localhost', :$port = 5432, :$user = ~$*USER, :$database, :$password, :$typemap = TypeMap::Simple, :$tls, *%tls-args) {
+my class Notification::Multiplexer {
+	has Supplier %!channels;
+	method submit(Protocol::Postgres::Notification $ (:$sender, :$channel, :$message --> Nil)) {
+		if %!channels{$channel} -> $channel {
+			$channel.emit(Notification.new(:$sender, :$message));
+		}
+	}
+	method done() {
+		for %!channels.values -> $channel {
+			$channel.done;
+		}
+	}
+	method get(Str $name --> Supply) {
+		my $supplier = %!channels{$name} //= Supplier::Preserving.new;
+		$supplier.Supply;
+	}
+}
+
+class Connection {
+	has Any:D $!socket is required;
+	has Protocol::Postgres::Client:D $!client is required handles<disconnected terminate get-parameter process-id>;
+	has Notification::Multiplexer $!multiplexer;
+	submethod BUILD(:$!socket, :$!client, :$!multiplexer) {}
+
+	method !connect(:$socket, :$user, :$database, :$password, :$typemap) {
+		my $client = Protocol::Postgres::Client.new(:$typemap);
+		my $vow = $client.disconnected.vow;
+		$socket.Supply(:bin).act({ $client.incoming-data($^data) }, :done{ $vow.keep(True) }, :quit{ $vow.break($^reason) });
+		$client.outbound-data.act({ await $socket.write($^data) }, :done{ $socket.close });
+
+		my $multiplexer = Notification::Multiplexer.new;
+		$client.notifications.act({ $multiplexer.submit($^notification) }, :done{ $multiplexer.done }, :quit{ $multiplexer.done });
+
+		await $client.startup($user, $database, $password);
+
+		self.bless(:$socket, :$client, :$multiplexer);
+	}
+
+	method connect-tcp(Str :$host = 'localhost', Int :$port = 5432, Str :$user = ~$*USER, Str :$database, Str :$password, Protocol::Postgres::TypeMap :$typemap = Protocol::Postgres::TypeMap::Simple, Bool :$tls, *%tls-args --> Promise) {
 		IO::Socket::Async.connect($host, $port).then: -> $promise {
 			my $socket = await $promise;
+
 			if ($tls) {
-				die if $tls ~~ Protocol::Postgres::X::Client;
 				require IO::Socket::Async::SSL;
 				my $class = ::('IO::Socket::Async::SSL');
 				die Protocol::Postgres::X::Client.new('Could not load IO::Socket::Async::SSL') if $class === Any;
 				await $socket.write(Protocol::Postgres::Client.startTls);
 				my $wanted = await $socket.Supply(:bin).head;
-				dd Protocol::Postgres::X::Client.WHO;
 				die Protocol::Postgres::X::Client.new('TLS rejected') if $wanted ne Blob.new(0x53);
-				$socket = await $class.upgrade-client($socket, :$host, %tls-args);
+				$socket = await $class.upgrade-client($socket, :$host, |%tls-args);
 			}
 
-			my $disconnected = Promise.new;
-			my $client  = Protocol::Postgres::Client.new(:$typemap, :$disconnected);
-			$socket.Supply(:bin).act({ $client.incoming-data($^data) }, :done({ $disconnected.keep }), :quit({ $disconnected.break($^reason) }));
-			$client.outbound-data.act({ await $socket.write($^data) }, :done({ $socket.close }));
-
-			await $client.startup($user, $database, $password);
-
-			self.bless(:$socket, :$client);
+			self!connect(:$socket, :$user, :$database, :$password, :$typemap);
 		}
 	}
 	method new() {
 		die "You probably want to use connect-tcp instead";
-	}
-
-	method disconnected {
-		$!client.disconnected.then({ await $^result });
 	}
 
 	method query(|args --> Promise) {
@@ -64,6 +90,12 @@ class Connection {
 	}
 	method prepare(|args --> Promise) {
 		$!client.prepare(|args, :prepared-statement(PreparedStatement));
+	}
+
+	method listen(Str $channel-name --> Promise) {
+		my $supply = $!multiplexer.get($channel-name);
+		my $query = $!client.query("LISTEN $channel-name");
+		$query.then: { await $query; $supply };
 	}
 }
 
@@ -78,7 +110,7 @@ Net::Postgres - an asynchronous postgresql client
 =begin code :lang<raku>
 
 use v6.d;
-use Protocol::Postgres;
+use Net::Postgres;
 
 my $client = await Net::Postgres::Connection.connect-tcp(:$host, :$port, :$user, :$password, :$database, :$tls);
 
@@ -121,7 +153,7 @@ if C<$tls> is enabled, it will pass on all unknown named arguments to C<IO::Sock
 
 This will issue a query with the given bind values, and return a promise to the result.
 
-For fetching queries such as C<SELECT> the result will be a C<ResultSet> object, for manipulation (e.g. C<INSERT>) and definition (e.g. C<CREATE>) queries it will result in the value C<True>.
+For fetching queries such as C<SELECT> the result in the promise will be a C<ResultSet> object, for manipulation (e.g. C<INSERT>) and definition (e.g. C<CREATE>) queries it will result a string describing the change (e.g. C<DELETE 3>). For a C<COPY TO> query it will C<Supply> with the data stream, and for C<COPY FROM> it will be a C<Supplier>.
 
 Both the input types and the output types will be typemapped between Raku types and Postgres types using the typemapper.
 
@@ -137,9 +169,9 @@ This prepares the query, and returns a Promise to the PreparedStatement object.
 
 This sends a message to the server to terminate the connection
 
-=head2 notifications(--> Supply[Notification])
+=head2 listen(Str $channel-name --> Promise[Supply])
 
-This returns a supply with all notifications that the current connection is subscribed to. Channels can be subscribed using the C<LISTEN> command, and messages can be sent using the C<NOTIFY> command.
+This listens to notifications on the given channel. It returns a C<Promise> to a C<Supply> of C<Notification>s.
 
 =head1 ResultSet
 
@@ -189,25 +221,27 @@ This runs the prepared statement, much like the C<query> method would have done 
 
 This closes the prepared statement.
 
+=head2 columns()
+
+This returns the columns of the result once executed.
+
 =head1 Notification
 
-C<Protocol::Postgres::Notification> has the following methods:
+C<Net::Postgres::Notification> has the following methods:
 
 =head2 sender(--> Int)
 
 This is the process-id of the sender
 
-=head2 channel(--> Str)
+=head2 message(--> Str)
 
-This is the name of the channel that the notification was sent on
-
-=head2 payload(--> Str)
-
-This is the payload of the notification
+This is the message of the notification
 
 =head1 Todo
 
-=item1 Implement connection pooling
+=item1 Persistent connections
+
+=item1 Connection pooling
 
 =head1 Author
 
