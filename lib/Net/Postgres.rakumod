@@ -42,12 +42,11 @@ my class Notification::Multiplexer {
 }
 
 class Connection {
-	has Any:D $!socket is required;
-	has Protocol::Postgres::Client:D $!client is required handles<disconnected terminate get-parameter process-id>;
-	has Notification::Multiplexer $!multiplexer;
-	submethod BUILD(:$!socket, :$!client, :$!multiplexer) {}
+	has Any:D $!socket is required is built;
+	has Protocol::Postgres::Client:D $!client is required is built handles<disconnected terminate get-parameter process-id>;
+	has Notification::Multiplexer $!multiplexer is built;
 
-	method !connect(:$socket, :$user, :$database, :$password, :$typemap) {
+	method !connect(:$socket, :$user, :$database, :$password, :$typemap --> Connection) {
 		my $client = Protocol::Postgres::Client.new(:$typemap);
 		my $vow = $client.disconnected.vow;
 		$socket.Supply(:bin).act({ $client.incoming-data($^data) }, :done{ $vow.keep(True) }, :quit{ $vow.break($^reason) });
