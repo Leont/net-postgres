@@ -6,12 +6,12 @@ use Protocol::Postgres;
 
 class ResultSet is Protocol::Postgres::ResultSet {
 	method arrays() { self.rows.list }
-	method array()  { self.arrays.head }
+	method array()  { await self.rows.first }
 
 	method value()  { self.array.head }
 
 	method hashes() { self.hash-rows.list }
-	method hash()   { self.hashes.head }
+	method hash()   { await self.hash-rows.first }
 }
 
 class PreparedStatement is Protocol::Postgres::PreparedStatement {
