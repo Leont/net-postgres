@@ -63,7 +63,7 @@ class Connection {
 		self.bless(:$socket, :$client, :$multiplexer);
 	}
 
-	method connect-tcp(Str :$host = 'localhost', Int :$port = 5432, Str :$user = ~$*USER, Str :$database, Str :$password, Protocol::Postgres::TypeMap :$typemap = Protocol::Postgres::TypeMap::Simple, Bool :$tls, *%tls-args --> Promise) {
+	method connect-tcp(Str :$host = 'localhost', Int :$port = 5432, Str :$user = ~$*USER, Str :$database, Str :$password, Protocol::Postgres::TypeMap :$typemap = Protocol::Postgres::default-typemap, Bool :$tls, *%tls-args --> Promise) {
 		IO::Socket::Async.connect($host, $port).then: -> $promise {
 			my $socket = await $promise;
 
