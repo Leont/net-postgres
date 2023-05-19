@@ -1,6 +1,7 @@
 Revision history for Net-Postgres
 
 {{$NEXT}}
+    - Add objects and object to ResultSet
 
 0.0.1  2022-02-19T16:26:29+01:00
     - Initial version

@@ -12,6 +12,9 @@ class ResultSet is Protocol::Postgres::ResultSet {
 
 	method hashes() { self.hash-rows.list }
 	method hash()   { await self.hash-rows.first }
+
+	method objects(::Class, Bool :$positional) { self.object-rows(Class, :$positional).list }
+	method object(::Class, Bool :$positional) { await self.object-rows(Class, :$positional).first }
 }
 
 class PreparedStatement is Protocol::Postgres::PreparedStatement {
@@ -114,8 +117,8 @@ use Net::Postgres;
 my $client = await Net::Postgres::Connection.connect-tcp(:$host, :$port, :$user, :$password, :$database, :$tls);
 
 my $resultset = await $client.query('SELECT * FROM foo WHERE id = $1', 42);
-for $resultset.hashes -> (:$name, :$description) {
-    say "$name is $description";
+for $resultset.objects(Foo) -> $foo {
+    do-something($foo);
 }
 
 =end code
@@ -188,6 +191,10 @@ This returns a Supply of rows. Each row is a list of values.
 
 This returns a Supply of rows. Each row is a hash with the column names as keys and the row values as values.
 
+=head2 object-rows(::Class, Bool :$positional --> Supply[Class])
+
+This returns a Supply of objects of class C<Class>, each object is constructed form the row hash unless positional is true in which case it's constructed from the row list.
+
 =head2 arrays
 
 This returns a sequence of arrays of results from all rows. This may C<await>.
@@ -207,6 +214,14 @@ This returns a sequence of hashes of the results from all rows. This may C<await
 =head2 hash
 
 This returns a single hash of the results from one rows. This may C<await>.
+
+=head2 objects(::Class, Bool :$positional)
+
+This returns a sequence of objects based on all the rows. This may C<await>.
+
+=head2 object(:Class, Bool :$positional)
+
+This returns a single object based on a single row. This may C<await>.
 
 =head1 PreparedStatement
 

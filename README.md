@@ -15,8 +15,8 @@ use Net::Postgres;
 my $client = await Net::Postgres::Connection.connect-tcp(:$host, :$port, :$user, :$password, :$database, :$tls);
 
 my $resultset = await $client.query('SELECT * FROM foo WHERE id = $1', 42);
-for $resultset.hashes -> (:$name, :$description) {
-    say "$name is $description";
+for $resultset.objects(Foo) -> $foo {
+    do-something($foo);
 }
 ```
 
@@ -100,6 +100,11 @@ hash-rows(--> Supply[Hash])
 
 This returns a Supply of rows. Each row is a hash with the column names as keys and the row values as values.
 
+object-rows(::Class, Bool :$positional --> Supply[Class])
+---------------------------------------------------------
+
+This returns a Supply of objects of class `Class`, each object is constructed form the row hash unless positional is true in which case it's constructed from the row list.
+
 arrays
 ------
 
@@ -124,6 +129,16 @@ hash
 ----
 
 This returns a single hash of the results from one rows. This may `await`.
+
+objects(::Class, Bool :$positional)
+-----------------------------------
+
+This returns a sequence of objects based on all the rows. This may `await`.
+
+object(:Class, Bool :$positional)
+---------------------------------
+
+This returns a single object based on a single row. This may `await`.
 
 PreparedStatement
 =================
