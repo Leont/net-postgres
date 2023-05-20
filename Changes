@@ -1,6 +1,8 @@
 Revision history for Net-Postgres
 
 {{$NEXT}}
+
+0.0.2  2023-05-20T20:00:11+02:00
     - Add objects and object to ResultSet
     - Use helper for default typemap
     - Switch module over to fez
