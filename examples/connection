@@ -4,7 +4,7 @@ use v6.d;
 use Net::Postgres;
 use Linenoise;
 
-unit sub MAIN(Str :$user = ~$*USER, Str :$database = 'test', Str :$password, :$host = 'localhost', :$port = 5432, Bool :$tls, *%tls-args);
+unit sub MAIN(Str :$user = ~$*USER, Str :$database, Str :$password, :$host = 'localhost', :$port = 5432, Bool :$tls, *%tls-args);
 
 linenoiseHistorySetMaxLen(100);
 my $client = await Net::Postgres::Connection.connect-tcp(:$user, :$database, :$password, :$host, :$port, :$tls, |%tls-args);
