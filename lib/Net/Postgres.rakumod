@@ -4,33 +4,9 @@ unit module Net::Postgres:ver<0.0.2>:auth<zef:leont>;
 
 use Protocol::Postgres;
 
-class Notification {
-	has Int:D $.sender is required;
-	has Str:D $.message is required handles<Str>;
-}
-
-my class Notification::Multiplexer {
-	has Supplier %!channels;
-	method submit(Protocol::Postgres::Notification $ (:$sender, :$channel, :$message --> Nil)) {
-		if %!channels{$channel} -> $channel {
-			$channel.emit(Notification.new(:$sender, :$message));
-		}
-	}
-	method done() {
-		for %!channels.values -> $channel {
-			$channel.done;
-		}
-	}
-	method get(Str $name --> Supply) {
-		my $supplier = %!channels{$name} //= Supplier::Preserving.new;
-		$supplier.Supply;
-	}
-}
-
 class Connection {
 	has Any:D $!socket is required is built;
 	has Protocol::Postgres::Client:D $!client is required is built handles<query query-multiple prepare disconnected terminate get-parameter process-id>;
-	has Notification::Multiplexer $!multiplexer is built;
 
 	method !connect(:$socket, :$user, :$database, :$password, :$typemap --> Connection) {
 		my $client = Protocol::Postgres::Client.new(:$typemap);
@@ -38,12 +14,9 @@ class Connection {
 		$socket.Supply(:bin).act({ $client.incoming-data($^data) }, :done{ $vow.keep(True) }, :quit{ $vow.break($^reason) });
 		$client.outbound-data.act({ await $socket.write($^data) }, :done{ $socket.close });
 
-		my $multiplexer = Notification::Multiplexer.new;
-		$client.notifications.act({ $multiplexer.submit($^notification) }, :done{ $multiplexer.done }, :quit{ $multiplexer.done });
-
 		await $client.startup($user, $database, $password);
 
-		self.bless(:$socket, :$client, :$multiplexer);
+		self.bless(:$socket, :$client);
 	}
 
 	method connect-tcp(Str :$host = 'localhost', Int :$port = 5432, Str :$user = ~$*USER, Str :$database, Str :$password, Protocol::Postgres::TypeMap :$typemap = Protocol::Postgres::default-typemap, Bool :$tls, :%tls-args --> Promise) {
@@ -85,7 +58,7 @@ class Connection {
 	}
 
 	method listen(Str $channel-name --> Promise) {
-		my $supply = $!multiplexer.get($channel-name);
+		my $supply = $!client.get-channel($channel-name);
 		my $query = $!client.query("LISTEN $channel-name");
 		$query.then: { await $query; $supply };
 	}
