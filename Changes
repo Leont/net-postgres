@@ -2,6 +2,7 @@ Revision history for Net-Postgres
 
 {{$NEXT}}
     - Add connect-local and connect methods
+    - Merge Net::Postgres::ResultSet with Protocol::Postgres::ResultSet
 
 0.0.2  2023-05-20T20:00:11+02:00
     - Add objects and object to ResultSet

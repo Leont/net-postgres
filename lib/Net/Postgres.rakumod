@@ -4,23 +4,6 @@ unit module Net::Postgres:ver<0.0.2>:auth<zef:leont>;
 
 use Protocol::Postgres;
 
-class ResultSet is Protocol::Postgres::ResultSet {
-	method arrays() { self.rows.list }
-	method array()  { await self.rows.first }
-
-	method value()  { self.array.head }
-
-	method hashes() { self.hash-rows.list }
-	method hash()   { await self.hash-rows.first }
-
-	method objects(::Class, Bool :$positional) { self.object-rows(Class, :$positional).list }
-	method object(::Class, Bool :$positional) { await self.object-rows(Class, :$positional).first }
-}
-
-class PreparedStatement is Protocol::Postgres::PreparedStatement {
-	method resultset() { ResultSet }
-}
-
 class Notification {
 	has Int:D $.sender is required;
 	has Str:D $.message is required handles<Str>;
@@ -46,7 +29,7 @@ my class Notification::Multiplexer {
 
 class Connection {
 	has Any:D $!socket is required is built;
-	has Protocol::Postgres::Client:D $!client is required is built handles<disconnected terminate get-parameter process-id>;
+	has Protocol::Postgres::Client:D $!client is required is built handles<query query-multiple prepare disconnected terminate get-parameter process-id>;
 	has Notification::Multiplexer $!multiplexer is built;
 
 	method !connect(:$socket, :$user, :$database, :$password, :$typemap --> Connection) {
@@ -99,16 +82,6 @@ class Connection {
 
 	method new() {
 		die "You probably want to use connect instead";
-	}
-
-	method query(|args --> Promise) {
-		$!client.query(|args, :resultset(ResultSet));
-	}
-	method query-multiple(|args --> Supply) {
-		$!client.query-multiple(|args, :resultset(ResultSet));
-	}
-	method prepare(|args --> Promise) {
-		$!client.prepare(|args, :prepared-statement(PreparedStatement));
 	}
 
 	method listen(Str $channel-name --> Promise) {

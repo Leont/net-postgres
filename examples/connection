@@ -1,6 +1,7 @@
 #! raku
 
 use v6.d;
+use Protocol::Postgres;
 use Net::Postgres;
 use Linenoise;
 
@@ -32,7 +33,7 @@ react {
 		default {
 			CATCH { default { say .message } }
 			given await $client.query(~$_) {
-				when Net::Postgres::ResultSet {
+				when Protocol::Postgres::ResultSet {
 					react {
 						whenever .hash-rows -> $row {
 							dd $row;
