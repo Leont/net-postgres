@@ -12,7 +12,7 @@ Synopsis
 use v6.d;
 use Net::Postgres;
 
-my $client = await Net::Postgres::Connection.connect-tcp(:$host, :$port, :$user, :$password, :$database, :$tls);
+my $client = await Net::Postgres::Connection.connect(:$host, :$port, :$user, :$password, :$database, :$tls);
 
 my $resultset = await $client.query('SELECT * FROM foo WHERE id = $1', 42);
 for $resultset.objects(Foo) -> $foo {
@@ -23,33 +23,53 @@ for $resultset.objects(Foo) -> $foo {
 Description
 ===========
 
-Net::Postgres is asynchronous implementation of (the client side of) the postgresql protocol based on `Protocol::Postgres`. It is typically used through the `Net::Postgres::Client` class.
+Net::Postgres is asynchronous implementation of (the client side of) the postgresql protocol based on `Protocol::Postgres`. It is typically used through the `Net::Postgres::Connection` class.
 
 Client
 ======
 
 `Net::Postgres::Client` has the following methods
 
-new(--> Protocol::Postgres::Client)
------------------------------------
+connect-tcp(--> Promise)
+------------------------
 
-This creates a new postgres client. It takes the following named arguments:
+This creates a promise to a new postgres client. It takes the following named arguments:
 
-    * Str :$host = 'localhost'
+  * Str :$host = 'localhost'
 
-    * Int :$port = 5432
+  * Int :$port = 5432
 
-    * Str :$user = ~$*USER
+  * Str :$user = ~$*USER
 
-    * Str :password
+  * Str :password
 
-    * Str :$database
+  * Str :$database
 
-    * TypeMap :$typemap = Protocol::Postgres::TypeMap::Simple
+  * TypeMap :$typemap = Protocol::Postgres::TypeMap::JSON
 
-    * Bool :$tls = False
+  * Bool :$tls = False
 
-if `$tls` is enabled, it will pass on all unknown named arguments to `IO::Socket::Async::SSL`.
+  * :%tls-args = ()
+
+connect-local(--> Promise)
+--------------------------
+
+  * IO(Str) :$path = '/var/run/postgresql/'.IO
+
+  * Int :$port = 5432
+
+  * Str :$user = ~$*USER
+
+  * Str :password
+
+  * Str :$database
+
+  * TypeMap :$typemap = Protocol::Postgres::TypeMap::JSON
+
+connect(--> Promise)
+--------------------
+
+This takes the same arguments as `connect-local` and `connect-tcp`. It will call the former if the `$host` is localhost and the `$path` exists, otherwise it will call `connect-tcp`.
 
 query($query, @bind-values --> Promise)
 ---------------------------------------

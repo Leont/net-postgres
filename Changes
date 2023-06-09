@@ -1,6 +1,7 @@
 Revision history for Net-Postgres
 
 {{$NEXT}}
+    - Add connect-local and connect methods
 
 0.0.2  2023-05-20T20:00:11+02:00
     - Add objects and object to ResultSet

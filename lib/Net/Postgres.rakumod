@@ -63,7 +63,7 @@ class Connection {
 		self.bless(:$socket, :$client, :$multiplexer);
 	}
 
-	method connect-tcp(Str :$host = 'localhost', Int :$port = 5432, Str :$user = ~$*USER, Str :$database, Str :$password, Protocol::Postgres::TypeMap :$typemap = Protocol::Postgres::default-typemap, Bool :$tls, *%tls-args --> Promise) {
+	method connect-tcp(Str :$host = 'localhost', Int :$port = 5432, Str :$user = ~$*USER, Str :$database, Str :$password, Protocol::Postgres::TypeMap :$typemap = Protocol::Postgres::default-typemap, Bool :$tls, :%tls-args --> Promise) {
 		IO::Socket::Async.connect($host, $port).then: -> $promise {
 			my $socket = await $promise;
 
@@ -80,8 +80,25 @@ class Connection {
 			self!connect(:$socket, :$user, :$database, :$password, :$typemap);
 		}
 	}
+
+	method connect-local(IO::Path(Str) :$path = '/var/run/postgresql/'.IO, Int :$port = 5432, Str :$user = ~$*USER, Str :$database, Str :$password, Protocol::Postgres::TypeMap :$typemap = Protocol::Postgres::default-typemap --> Promise) {
+		my $filepath = $path.child(".s.PGSQL.$port");
+		IO::Socket::Async.connect-path(~$filepath).then: -> $promise {
+			my $socket = await $promise;
+			self!connect(:$socket, :$user, :$database, :$password, :$typemap);
+		}
+	}
+
+	method connect(Str :$host = 'localhost', IO::Path(Str) :$path = '/var/run/postgresql/'.IO, Int :$port = 5432, Str :$user = ~$*USER, Str :$database, Str :$password, Protocol::Postgres::TypeMap :$typemap = Protocol::Postgres::default-typemap, Bool :$tls, :%tls-args --> Promise) {
+		if $host eq 'localhost' && $path.d && IO::Socket::Async.can('connect-path') {
+			self.connect-local(:$path, :$port, :$user, :$database, :$password, :$typemap);
+		} else {
+			self.connect-tcp(:$host, :$port, :$user, :$database, :$password, :$typemap, :$tls, :%tls-args);
+		}
+	}
+
 	method new() {
-		die "You probably want to use connect-tcp instead";
+		die "You probably want to use connect instead";
 	}
 
 	method query(|args --> Promise) {
@@ -114,7 +131,7 @@ Net::Postgres - an asynchronous postgresql client
 use v6.d;
 use Net::Postgres;
 
-my $client = await Net::Postgres::Connection.connect-tcp(:$host, :$port, :$user, :$password, :$database, :$tls);
+my $client = await Net::Postgres::Connection.connect(:$host, :$port, :$user, :$password, :$database, :$tls);
 
 my $resultset = await $client.query('SELECT * FROM foo WHERE id = $1', 42);
 for $resultset.objects(Foo) -> $foo {
@@ -125,31 +142,49 @@ for $resultset.objects(Foo) -> $foo {
 
 =head1 Description
 
-Net::Postgres is asynchronous implementation of (the client side of) the postgresql protocol based on C<Protocol::Postgres>. It is typically used through the C<Net::Postgres::Client> class.
+Net::Postgres is asynchronous implementation of (the client side of) the postgresql protocol based on C<Protocol::Postgres>. It is typically used through the C<Net::Postgres::Connection> class.
 
 =head1 Client
 
 C<Net::Postgres::Client> has the following methods
 
-=head2 new(--> Protocol::Postgres::Client)
+=head2 connect-tcp(--> Promise)
 
-This creates a new postgres client. It takes the following named arguments:
+This creates a promise to a new postgres client. It takes the following named arguments:
 
-=item2 Str :$host = 'localhost'
+=item1 Str :$host = 'localhost'
 
-=item2 Int :$port = 5432
+=item1 Int :$port = 5432
 
-=item2 Str :$user = ~$*USER
+=item1 Str :$user = ~$*USER
 
-=item2 Str :password
+=item1 Str :password
 
-=item2 Str :$database
+=item1 Str :$database
 
-=item2 TypeMap :$typemap = Protocol::Postgres::TypeMap::Simple
+=item1 TypeMap :$typemap = Protocol::Postgres::TypeMap::JSON
 
-=item2 Bool :$tls = False
+=item1 Bool :$tls = False
 
-if C<$tls> is enabled, it will pass on all unknown named arguments to C<IO::Socket::Async::SSL>.
+=item1 :%tls-args = ()
+
+=head2 connect-local(--> Promise)
+
+=item1 IO(Str) :$path = '/var/run/postgresql/'.IO
+
+=item1 Int :$port = 5432
+
+=item1 Str :$user = ~$*USER
+
+=item1 Str :password
+
+=item1 Str :$database
+
+=item1 TypeMap :$typemap = Protocol::Postgres::TypeMap::JSON
+
+=head2 connect(--> Promise)
+
+This takes the same arguments as C<connect-local> and C<connect-tcp>. It will call the former if the C<$host> is localhost and the C<$path> exists, otherwise it will call C<connect-tcp>.
 
 =head2 query($query, @bind-values --> Promise)
 
