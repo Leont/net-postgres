@@ -1,6 +1,6 @@
 use v6.d;
 
-unit module Net::Postgres:ver<0.0.2>:auth<zef:leont>;
+unit module Net::Postgres:ver<0.0.3>:auth<zef:leont>;
 
 use Protocol::Postgres;
 
