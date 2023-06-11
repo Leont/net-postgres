@@ -90,6 +90,21 @@ prepare($query --> Promise[PreparedStatement])
 
 This prepares the query, and returns a Promise to the PreparedStatement object.
 
+add-enum-type(Str $name, ::Enum --> Promise)
+--------------------------------------------
+
+This looks up the `oid` of postgres enum `$name`, and adds an appriopriate `Type` object to the typemap to convert it from/to `Enum`.
+
+add-composite-type(Str $name, ::Composite, Bool :$positional --> Promise)
+-------------------------------------------------------------------------
+
+This looks up the `oid` of the postgres composite type <$name>, and maps it to `Composite`; if `$positional` is set it will use positional constructor arguments, otherwise named ones are used.
+
+add-custom-type(Str $name, ::Custom, &from-string?, &to-string?)
+----------------------------------------------------------------
+
+This adds a custom converter from postgres type `$name` from/to Raku type `Custom`. By default `&from-string` will do a coercion, and `&to-string` will do stringification.
+
 terminate(--> Nil)
 ------------------
 

@@ -6,7 +6,7 @@ use Protocol::Postgres;
 
 class Connection {
 	has Any:D $!socket is required is built;
-	has Protocol::Postgres::Client:D $!client is required is built handles<query query-multiple prepare disconnected terminate get-parameter process-id>;
+	has Protocol::Postgres::Client:D $!client is required is built handles<query query-multiple prepare disconnected add-enum-type add-composite-type add-custom-type terminate get-parameter process-id>;
 
 	method !connect(:$socket, :$user, :$database, :$password, :$typemap --> Connection) {
 		my $client = Protocol::Postgres::Client.new(:$typemap);
@@ -147,6 +147,18 @@ This will issue a complex query that may contain multiple statements, but can no
 =head2 prepare($query --> Promise[PreparedStatement])
 
 This prepares the query, and returns a Promise to the PreparedStatement object.
+
+=head2 add-enum-type(Str $name, ::Enum --> Promise)
+
+This looks up the C<oid> of postgres enum C<$name>, and adds an appriopriate C<Type> object to the typemap to convert it from/to C<Enum>.
+
+=head2 add-composite-type(Str $name, ::Composite, Bool :$positional --> Promise)
+
+This looks up the C<oid> of the postgres composite type <$name>, and maps it to C<Composite>; if C<$positional> is set it will use positional constructor arguments, otherwise named ones are used.
+
+=head2 add-custom-type(Str $name, ::Custom, &from-string?, &to-string?)
+
+This adds a custom converter from postgres type C<$name> from/to Raku type C<Custom>. By default C<&from-string> will do a coercion, and C<&to-string> will do stringification.
 
 =head2 terminate(--> Nil)
 
