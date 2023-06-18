@@ -59,7 +59,8 @@ class Connection {
 
 	method listen(Str $channel-name --> Promise) {
 		my $supply = $!client.get-channel($channel-name);
-		my $query = $!client.query("LISTEN $channel-name");
+		my $name = '"' ~ $channel-name.subst('"', '""', :g) ~ '"';
+		my $query = $!client.query("LISTEN $name");
 		$query.then: { await $query; $supply };
 	}
 }
