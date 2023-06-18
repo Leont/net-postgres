@@ -8,7 +8,7 @@ class Connection {
 	has Any:D $!socket is required is built;
 	has Protocol::Postgres::Client:D $!client is required is built handles<query query-multiple prepare disconnected add-enum-type add-composite-type add-custom-type terminate get-parameter process-id>;
 
-	method !connect(:$socket, :$user, :$database, :$password, :$typemap --> Connection) {
+	method !connect($socket, $user, $database, $password, $typemap --> Connection) {
 		my $client = Protocol::Postgres::Client.new(:$typemap);
 		my $vow = $client.disconnected.vow;
 		$socket.Supply(:bin).act({ $client.incoming-data($^data) }, :done{ $vow.keep(True) }, :quit{ $vow.break($^reason) });
@@ -33,7 +33,7 @@ class Connection {
 				$socket = await $class.upgrade-client($socket, :$host, |%tls-args);
 			}
 
-			self!connect(:$socket, :$user, :$database, :$password, :$typemap);
+			self!connect($socket, $user, $database, $password, $typemap);
 		}
 	}
 
@@ -41,7 +41,7 @@ class Connection {
 		my $filepath = $path.child(".s.PGSQL.$port");
 		IO::Socket::Async.connect-path(~$filepath).then: -> $promise {
 			my $socket = await $promise;
-			self!connect(:$socket, :$user, :$database, :$password, :$typemap);
+			self!connect($socket, $user, $database, $password, $typemap);
 		}
 	}
 
