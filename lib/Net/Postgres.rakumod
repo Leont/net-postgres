@@ -4,6 +4,10 @@ unit module Net::Postgres:ver<0.0.3>:auth<zef:leont>;
 
 use Protocol::Postgres;
 
+our constant ResultSet = Protocol::Postgres::ResultSet;
+our constant PreparedStatement = Protocol::Postgres::PreparedStatement;
+our constant Notification = Protocol::Postgres::Notification;
+
 class Connection {
 	has Any:D $!socket is required is built;
 	has Protocol::Postgres::Client:D $!client is required is built handles<query query-multiple prepare disconnected add-enum-type add-composite-type add-custom-type terminate get-parameter process-id>;
