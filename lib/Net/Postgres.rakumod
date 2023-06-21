@@ -241,13 +241,17 @@ This returns the columns of the result once executed.
 
 C<Net::Postgres::Notification> has the following methods:
 
+=head2 message(--> Str)
+
+This is the message of the notification. The notification will also stringify to this value.
+
+=head2 channel(--> Str)
+
+The channel of the notification.
+
 =head2 sender(--> Int)
 
 This is the process-id of the sender
-
-=head2 message(--> Str)
-
-This is the message of the notification
 
 =head1 Todo
 

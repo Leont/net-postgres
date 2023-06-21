@@ -200,15 +200,20 @@ Notification
 
 `Net::Postgres::Notification` has the following methods:
 
+message(--> Str)
+----------------
+
+This is the message of the notification. The notification will also stringify to this value.
+
+channel(--> Str)
+----------------
+
+The channel of the notification.
+
 sender(--> Int)
 ---------------
 
 This is the process-id of the sender
-
-message(--> Str)
-----------------
-
-This is the message of the notification
 
 Todo
 ====
