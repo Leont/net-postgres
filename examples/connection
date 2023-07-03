@@ -8,7 +8,7 @@ use Linenoise;
 unit sub MAIN(Str :$user = ~$*USER, Str :$database, Str :$password, :$host = 'localhost', :$port = 5432, Bool :$tls, *%tls-args);
 
 linenoiseHistorySetMaxLen(100);
-my $client = await Net::Postgres::Connection.connect-tcp(:$user, :$database, :$password, :$host, :$port, :$tls, |%tls-args);
+my $client = await Net::Postgres::Connection.connect(:$user, :$database, :$password, :$host, :$port, :$tls, |%tls-args);
 
 sub stdin-supply() {
 	my $supplier = Supplier.new;
