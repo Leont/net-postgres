@@ -10,7 +10,7 @@ our constant Notification = Protocol::Postgres::Notification;
 
 class Connection {
 	has Any:D $!socket is required is built;
-	has Protocol::Postgres::Client:D $!client is required is built handles<query query-multiple prepare disconnected add-enum-type add-composite-type add-custom-type terminate get-parameter process-id>;
+	has Protocol::Postgres::Client:D $!client is required is built handles<query query-multiple prepare disconnected add-enum-type add-composite-type add-custom-type terminate get-parameter process-id query-status>;
 
 	method !connect($socket, $user, $database, $password, $typemap --> Connection) {
 		my $client = Protocol::Postgres::Client.new(:$typemap);
@@ -145,6 +145,8 @@ For fetching queries such as C<SELECT> the result in the promise will be a C<Res
 
 Both the input types and the output types will be typemapped between Raku types and Postgres types using the typemapper.
 
+Not that this uses postgres-native placeholders (C<$1, $2>), instead of DBI-style (C<?, ?>).
+
 =head2 query-multiple($query --> Supply[ResultSet])
 
 This will issue a complex query that may contain multiple statements, but can not use bind values. It will return a C<Supply> to the results of each query.
@@ -172,6 +174,10 @@ This sends a message to the server to terminate the connection
 =head2 listen(Str $channel-name --> Promise[Supply])
 
 This listens to notifications on the given channel. It returns a C<Promise> to a C<Supply> of C<Notification>s.
+
+=head2 query-status(--> Protocol::Postgres::QueryStatus)
+
+This returns the query status as of the last finished query as a C<enum Protocol::Postgres::QueryStatus> value: C<Idle> (No transaction is active), C<Transaction> (A transaction is currently in progress) or C<Error> (The current transaction has failed and needs to be rolled back).
 
 =head1 ResultSet
 

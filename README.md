@@ -80,6 +80,8 @@ For fetching queries such as `SELECT` the result in the promise will be a `Resul
 
 Both the input types and the output types will be typemapped between Raku types and Postgres types using the typemapper.
 
+Not that this uses postgres-native placeholders (`$1, $2`), instead of DBI-style (`?, ?`).
+
 query-multiple($query --> Supply[ResultSet])
 --------------------------------------------
 
@@ -114,6 +116,11 @@ listen(Str $channel-name --> Promise[Supply])
 ---------------------------------------------
 
 This listens to notifications on the given channel. It returns a `Promise` to a `Supply` of `Notification`s.
+
+query-status(--> Protocol::Postgres::QueryStatus)
+-------------------------------------------------
+
+This returns the query status as of the last finished query as a `enum Protocol::Postgres::QueryStatus` value: `Idle` (No transaction is active), `Transaction` (A transaction is currently in progress) or `Error` (The current transaction has failed and needs to be rolled back).
 
 ResultSet
 =========

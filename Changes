@@ -3,6 +3,7 @@ Revision history for Net-Postgres
 {{$NEXT}}
     - Quote channel name when listening
     - Add aliases for ResultSet/PreparedStatement/Notification
+    - Add query-status delegate method
 
 0.0.3  2023-06-11T13:37:35+02:00
     - Add connect-local and connect methods
