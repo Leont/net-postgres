@@ -1,6 +1,8 @@
 Revision history for Net-Postgres
 
 {{$NEXT}}
+
+0.0.4  2023-07-11T01:42:22+02:00
     - Add transaction method
     - Quote channel name when listening
     - Add aliases for ResultSet/PreparedStatement/Notification
