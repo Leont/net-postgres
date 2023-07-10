@@ -67,6 +67,21 @@ class Connection {
 		my $query = $!client.query("LISTEN $name");
 		$query.then: { await $query; $supply };
 	}
+
+	method transaction(&code --> Promise) {
+		$!client.query('BEGIN').then: -> $p {
+			await $p;
+			my \result = try {
+				CATCH { default {
+					try await $!client.query('ROLLBACK');
+					.rethrow;
+				}}
+				code();
+			}
+			await $!client.query('COMMIT');
+			result;
+		}
+	}
 }
 
 =begin pod
@@ -87,6 +102,9 @@ my $client = await Net::Postgres::Connection.connect(:$host, :$port, :$user, :$p
 my $resultset = await $client.query('SELECT * FROM foo WHERE id = $1', 42);
 for $resultset.objects(Foo) -> $foo {
     do-something($foo);
+}
+await $client.transaction: {
+    my $id = await $client.query('INSERT INTO foo(data) VALUES($1) RETURNING id', $data);
 }
 
 =end code
@@ -154,6 +172,10 @@ This will issue a complex query that may contain multiple statements, but can no
 =head2 prepare($query --> Promise[PreparedStatement])
 
 This prepares the query, and returns a Promise to the PreparedStatement object.
+
+=head2 transaction(&code)
+
+To use a transaction, one can use the C<transaction> method. It's code reference will act as a wrapper for the transaction. If anything throws an exception out of the callback (e.g. a failed query method), a rollback will be attempted.
 
 =head2 add-enum-type(Str $name, ::Enum --> Promise)
 

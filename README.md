@@ -18,6 +18,9 @@ my $resultset = await $client.query('SELECT * FROM foo WHERE id = $1', 42);
 for $resultset.objects(Foo) -> $foo {
     do-something($foo);
 }
+await $client.transaction: {
+    my $id = await $client.query('INSERT INTO foo(data) VALUES($1) RETURNING id', $data);
+}
 ```
 
 Description
@@ -91,6 +94,11 @@ prepare($query --> Promise[PreparedStatement])
 ----------------------------------------------
 
 This prepares the query, and returns a Promise to the PreparedStatement object.
+
+transaction(&code)
+------------------
+
+To use a transaction, one can use the `transaction` method. It's code reference will act as a wrapper for the transaction. If anything throws an exception out of the callback (e.g. a failed query method), a rollback will be attempted.
 
 add-enum-type(Str $name, ::Enum --> Promise)
 --------------------------------------------

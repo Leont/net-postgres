@@ -1,6 +1,7 @@
 Revision history for Net-Postgres
 
 {{$NEXT}}
+    - Add transaction method
     - Quote channel name when listening
     - Add aliases for ResultSet/PreparedStatement/Notification
     - Add query-status delegate method
